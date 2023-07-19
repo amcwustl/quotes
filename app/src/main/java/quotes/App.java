@@ -3,12 +3,91 @@
  */
 package quotes;
 
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
+
+import java.io.*;
+import java.lang.reflect.Type;
+import java.nio.file.Files;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Random;
+
 public class App {
-    public String getGreeting() {
-        return "Hello World!";
+
+    public static void main(String[] args) throws FileNotFoundException {
+        String filePath = "../app/src/main/resources/quotes.json";
+        Gson gson = new Gson();
+        TypeToken<List<Quote>> quoteListType = new TypeToken<List<Quote>>() {};
+
+        try (FileReader fileReader = new FileReader(filePath)) {
+            File quotesFile = new File(filePath);
+            String quotesJSON = new String(Files.readAllBytes(quotesFile.toPath()));
+            List<Quote> quotes = gson.fromJson(quotesJSON, quoteListType.getType());
+
+            if (quotes.isEmpty()){
+                System.out.println("No quotes found in the file");
+                return;
+            }
+
+            if (args.length == 0){
+                getRandomQuote(quotes);
+            } else if (args.length == 2 && args[0].equalsIgnoreCase("contains")){
+                String wordToSearch = args[1].toLowerCase();
+                getRandomQuoteContaining(quotes, wordToSearch);
+            } else if (args.length ==2 && args[0].equalsIgnoreCase("author")){
+                String authorToSearch = args[1];
+                getRandomQuoteAuthor(quotes, authorToSearch);
+            } else {
+                // Invalid command-line arguments
+                System.err.println("Invalid command-line arguments. Usage:");
+                System.err.println("For a random quote: ./gradlew run");
+                System.err.println("For a random quote containing a word: ./gradlew run --args 'contains [word]'");
+                System.err.println("For a random quote from an author: ./gradlew run --args 'author [author (full name in double quotes)]'");
+            }
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
-    public static void main(String[] args) {
-        System.out.println(new App().getGreeting());
+    public static String getRandomQuote(List<Quote> quotes) {
+        Random random = new Random();
+        int quoteIndex = random.nextInt(quotes.size());
+        Quote quote = quotes.get(quoteIndex);
+        System.out.println(quote.toString());
+        return quote.toString();
+
+    }
+
+    public static String getRandomQuoteContaining(List<Quote> quotes, String word){
+        List<Quote> filteredQuotes = new ArrayList<>();
+        for (Quote quote: quotes) {
+            if (quote.getText().toLowerCase().contains(word)) {
+                filteredQuotes.add(quote);
+            }
+        }
+        if (!filteredQuotes.isEmpty()){
+            return getRandomQuote(filteredQuotes);
+        } else {
+            System.out.println("No quote found containing the input word");
+            return null;
+        }
+    }
+
+    public static String getRandomQuoteAuthor(List<Quote> quotes, String author) {
+        List<Quote> filteredQuotes = new ArrayList<>();
+        for (Quote quote : quotes){
+            if (quote.getAuthor().equalsIgnoreCase(author)) {
+                filteredQuotes.add(quote);
+            }
+        }
+
+        if (!filteredQuotes.isEmpty()) {
+            return getRandomQuote(filteredQuotes);
+        } else {
+            System.out.println("No quote found by that author");
+            return null;
+        }
     }
 }
